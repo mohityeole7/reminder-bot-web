@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reminder Bot</title>
+<style>
+  :root {
+    --bg: #0f1420;
+    --card: #171d2b;
+    --card-hover: #1e2536;
+    --border: #2a3244;
+    --text: #e8ebf2;
+    --text-dim: #8b93a7;
+    --accent: #4f8cff;
+    --accent-dim: #2a3f66;
+    --deadline: #ff7a5c;
+    --deadline-dim: #4a2c26;
+    --success: #4fd68c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 2rem;
+  }
+  header {
+    padding: 1.25rem 1rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: 1.3rem;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header p {
+    margin: 0.25rem 0 0;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  .tabs {
+    display: flex;
+    max-width: 480px;
+    margin: 1rem auto 0;
+    padding: 0 1rem;
+    gap: 0.5rem;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 0.6rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .tab-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  main {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .card h2 {
+    font-size: 0.95rem;
+    margin: 0 0 0.75rem;
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin: 0.6rem 0 0.3rem;
+  }
+  input[type="text"], input[type="date"], select {
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    background: #0d121d;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 1rem;
+  }
+  .type-toggle {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.3rem;
+  }
+  .type-btn {
+    flex: 1;
+    padding: 0.5rem;
+    background: #0d121d;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: center;
+  }
+  .type-btn.selected[data-type="reminder"] {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    color: var(--text);
+  }
+  .type-btn.selected[data-type="deadline"] {
+    border-color: var(--deadline);
+    background: var(--deadline-dim);
+    color: var(--text);
+  }
+  button.primary {
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.primary:active { opacity: 0.85; }
+
+  .bucket-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin: 1.25rem 0 0.5rem;
+  }
+  .item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem 0.85rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .item.deadline { border-left: 3px solid var(--deadline); }
+  .item.reminder { border-left: 3px solid var(--accent); }
+  .item-text {
+    flex: 1;
+    font-size: 0.95rem;
+  }
+  .item-badge {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 20px;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .item-badge.urgent { background: var(--deadline-dim); color: var(--deadline); }
+  .item-badge.ok { background: var(--accent-dim); color: var(--accent); }
+  .del-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+  }
+  .empty {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 1.5rem 0;
+  }
+  .status {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 0.5rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Reminder Bot</h1>
+  <p>Add a note. The bot reads it back when you ask.</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="notes">Notes</button>
+  <button class="tab-btn" data-tab="control" disabled title="Coming later">Control</button>
+</div>
+
+<main>
+  <div class="panel active" id="panel-notes">
+
+    <div class="card">
+      <h2>Add a note</h2>
+      <label for="text-input">What is it?</label>
+      <input type="text" id="text-input" placeholder="e.g. Submit DBMS assignment">
+
+      <label for="date-input">Due date</label>
+      <input type="date" id="date-input">
+
+      <label>Type</label>
+      <div class="type-toggle">
+        <div class="type-btn selected" data-type="reminder">Reminder</div>
+        <div class="type-btn" data-type="deadline">Deadline</div>
+      </div>
+
+      <button class="primary" id="add-btn">Add note</button>
+      <div class="status" id="add-status"></div>
+    </div>
+
+    <div id="deadlines-section"></div>
+    <div id="buckets-section"></div>
+
+  </div>
+
+  <div class="panel" id="panel-control">
+    <div class="card">
+      <p class="empty">Drive controls come in a later phase.</p>
+    </div>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDUT9q0yKpseAtHeHWVoIR8uHvDv9dMJZA",
+    authDomain: "reminder-bot-e0ab5.firebaseapp.com",
+    databaseURL: "https://reminder-bot-e0ab5-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "reminder-bot-e0ab5",
+    storageBucket: "reminder-bot-e0ab5.firebasestorage.app",
+    messagingSenderId: "1052559567659",
+    appId: "1:1052559567659:web:9d38eaaea4bc5f35dbb36e"
+  };
+  // UI-only listeners first, so buttons work even if Firebase below fails to load
+  let selectedType = "reminder";
+
+  document.querySelectorAll(".type-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".type-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedType = btn.dataset.type;
+    });
+  });
+
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  const dateInput = document.getElementById("date-input");
+  const today = new Date();
+  dateInput.value = today.toISOString().split("T")[0];
+
+  let db, notesRef, firebaseReady = false;
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    notesRef = db.ref("notes");
+    firebaseReady = true;
+  } catch (err) {
+    const statusEl = document.getElementById("add-status");
+    statusEl.textContent = "Can't connect to Firebase. Check internet, or an ad blocker may be blocking gstatic.com.";
+    statusEl.style.color = "var(--deadline)";
+    document.getElementById("buckets-section").innerHTML =
+      '<div class="empty">Notes can\'t load right now \u2014 Firebase connection failed.</div>';
+  }
+
+  document.getElementById("add-btn").addEventListener("click", () => {
+    const text = document.getElementById("text-input").value.trim();
+    const dueDate = document.getElementById("date-input").value;
+    const statusEl = document.getElementById("add-status");
+
+    if (!firebaseReady) {
+      statusEl.textContent = "Not connected to Firebase \u2014 can't save right now.";
+      statusEl.style.color = "var(--deadline)";
+      return;
+    }
+    if (!text) {
+      statusEl.textContent = "Enter what it is first.";
+      statusEl.style.color = "var(--deadline)";
+      return;
+    }
+    if (!dueDate) {
+      statusEl.textContent = "Pick a due date.";
+      statusEl.style.color = "var(--deadline)";
+      return;
+    }
+
+    notesRef.push({
+      text: text,
+      dueDate: dueDate,
+      type: selectedType,
+      createdAt: Date.now()
+    }).then(() => {
+      document.getElementById("text-input").value = "";
+      statusEl.textContent = "Added.";
+      statusEl.style.color = "var(--success)";
+      setTimeout(() => statusEl.textContent = "", 1500);
+    }).catch(err => {
+      statusEl.textContent = "Couldn't save. Check connection.";
+      statusEl.style.color = "var(--deadline)";
+    });
+  });
+
+  function daysBetween(dateStr) {
+    const due = new Date(dateStr + "T00:00:00");
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return Math.round((due - now) / 86400000);
+  }
+
+  function bucketFor(daysAway) {
+    if (daysAway < 0) return "Overdue";
+    if (daysAway === 0) return "Today";
+    if (daysAway === 1) return "Tomorrow";
+    if (daysAway <= 7) return "This week";
+    if (daysAway <= 31) return "This month";
+    return "This year";
+  }
+
+  function countdownLabel(daysAway) {
+    if (daysAway < 0) return `${Math.abs(daysAway)}d overdue`;
+    if (daysAway === 0) return "Today";
+    if (daysAway === 1) return "1 day left";
+    return `${daysAway} days left`;
+  }
+
+  function renderNotes(notes) {
+    const deadlinesEl = document.getElementById("deadlines-section");
+    const bucketsEl = document.getElementById("buckets-section");
+    deadlinesEl.innerHTML = "";
+    bucketsEl.innerHTML = "";
+
+    if (notes.length === 0) {
+      bucketsEl.innerHTML = '<div class="empty">No notes yet. Add one above.</div>';
+      return;
+    }
+
+    const deadlines = notes.filter(n => n.type === "deadline")
+      .sort((a, b) => daysBetween(a.dueDate) - daysBetween(b.dueDate));
+
+    const reminders = notes.filter(n => n.type === "reminder");
+
+    if (deadlines.length > 0) {
+      const label = document.createElement("div");
+      label.className = "bucket-label";
+      label.textContent = "Deadlines";
+      deadlinesEl.appendChild(label);
+
+      deadlines.forEach(n => {
+        const days = daysBetween(n.dueDate);
+        const item = buildItem(n, countdownLabel(days), days <= 2);
+        deadlinesEl.appendChild(item);
+      });
+    }
+
+    const bucketOrder = ["Overdue", "Today", "Tomorrow", "This week", "This month", "This year"];
+    const grouped = {};
+    reminders.forEach(n => {
+      const b = bucketFor(daysBetween(n.dueDate));
+      if (!grouped[b]) grouped[b] = [];
+      grouped[b].push(n);
+    });
+
+    bucketOrder.forEach(bucket => {
+      if (!grouped[bucket]) return;
+      const label = document.createElement("div");
+      label.className = "bucket-label";
+      label.textContent = bucket;
+      bucketsEl.appendChild(label);
+      grouped[bucket].forEach(n => {
+        const item = buildItem(n, bucket, false);
+        bucketsEl.appendChild(item);
+      });
+    });
+  }
+
+  function buildItem(note, badgeText, urgent) {
+    const div = document.createElement("div");
+    div.className = "item " + note.type;
+
+    const textEl = document.createElement("div");
+    textEl.className = "item-text";
+    textEl.textContent = note.text;
+
+    const badge = document.createElement("div");
+    badge.className = "item-badge " + (urgent ? "urgent" : "ok");
+    badge.textContent = badgeText;
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "del-btn";
+    delBtn.textContent = "\u2715";
+    delBtn.addEventListener("click", () => {
+      notesRef.child(note.id).remove();
+    });
+
+    div.appendChild(textEl);
+    div.appendChild(badge);
+    div.appendChild(delBtn);
+    return div;
+  }
+
+  if (firebaseReady) {
+    notesRef.on("value", snapshot => {
+      const val = snapshot.val();
+      const notes = [];
+      if (val) {
+        Object.keys(val).forEach(key => {
+          notes.push({ id: key, ...val[key] });
+        });
+      }
+      renderNotes(notes);
+    });
+  }
+</script>
+
+</body>
+</html>
