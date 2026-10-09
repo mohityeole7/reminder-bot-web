@@ -972,14 +972,7 @@ if (timeMatch) {
       String(minutes).padStart(2, "0");
   }
 }
-      const timeMatch = transcript.match(
-  /\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i
-);
 
-if (timeMatch) {
-  const spokenTime = timeMatch[0];
-  console.log("Detected reminder time:", spokenTime);
-}
 
       // Remove a common spoken command prefix.
       // Example: "Remind me at 8 PM to study robotics"
