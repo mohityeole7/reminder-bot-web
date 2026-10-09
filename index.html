@@ -958,23 +958,34 @@ const timeMatch = transcript.match(
 
 spokenReminderTime = null;
 
+
+const timeMatch = transcript.match(
+  /\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i
+);
+
+spokenReminderTime = null;
+
 if (timeMatch) {
-  spokenReminderTime =
-  String(hours).padStart(2, "0") + ":" +
-  String(minutes).padStart(2, "0");
   let hours = Number(timeMatch[1]);
   const minutes = Number(timeMatch[2] || "0");
   const period = timeMatch[3].toLowerCase();
 
-  if (hours >= 1 && hours <= 12 && minutes < 60) {
+  if (
+    hours >= 1 &&
+    hours <= 12 &&
+    minutes >= 0 &&
+    minutes < 60
+  ) {
     if (period === "pm" && hours !== 12) hours += 12;
     if (period === "am" && hours === 12) hours = 0;
 
     spokenReminderTime =
-      String(hours).padStart(2, "0") + ":" +
+      String(hours).padStart(2, "0") +
+      ":" +
       String(minutes).padStart(2, "0");
   }
 }
+
 
 
       // Remove a common spoken command prefix.
