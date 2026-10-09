@@ -386,8 +386,12 @@
     <div class="card">
       <h2>Add a note</h2>
       <label for="text-input">What is it?</label>
-      <input type="text" id="text-input" placeholder="e.g. Submit DBMS assignment">
+<input type="text" id="text-input" placeholder="e.g. Submit DBMS assignment">
 
+<button type="button" class="primary" id="voice-btn" style="margin-top:0.6rem;">
+  🎙️ Speak your reminder
+</button>
+<div class="status" id="voice-status" aria-live="polite"></div>
       <label>Due date</label>
       <div class="cal-wrap">
         <div class="date-field" id="date-field">
@@ -908,6 +912,78 @@
         .catch(() => { driveStatus.textContent = "Couldn't reach bot. Same WiFi?"; driveStatus.style.color = "var(--danger)"; });
     });
   });
+
+
+  // ---------- Phone speech recognition ----------
+  const voiceBtn = document.getElementById("voice-btn");
+  const voiceStatus = document.getElementById("voice-status");
+  const noteInput = document.getElementById("text-input");
+
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    voiceBtn.disabled = true;
+    voiceStatus.textContent =
+      "Speech recognition is not supported in this browser.";
+  } else {
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-IN";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    voiceBtn.addEventListener("click", () => {
+      voiceStatus.textContent = "Listening... Speak your reminder.";
+      voiceStatus.style.color = "var(--text-dim)";
+      voiceBtn.disabled = true;
+
+      try {
+        recognition.start();
+      } catch (error) {
+        voiceBtn.disabled = false;
+        voiceStatus.textContent =
+          "Couldn't start listening. Please try again.";
+        voiceStatus.style.color = "var(--danger)";
+      }
+    });
+
+    recognition.addEventListener("result", (event) => {
+      const transcript = event.results[0][0].transcript.trim();
+
+      // Remove a common spoken command prefix.
+      // Example: "Remind me at 8 PM to study robotics"
+      // becomes "study robotics".
+      const cleaned = transcript.replace(
+        /^\s*(?:please\s+)?remind\s+me(?:\s+at\s+.+?)?\s+to\s+/i,
+        ""
+      ).trim();
+
+      noteInput.value = cleaned || transcript;
+
+      voiceStatus.textContent =
+        "Recognized: " + transcript;
+      voiceStatus.style.color = "var(--success)";
+      noteInput.focus();
+    });
+
+    recognition.addEventListener("error", (event) => {
+      const messages = {
+        "not-allowed": "Allow microphone access in your browser settings.",
+        "no-speech": "No speech detected. Please try again.",
+        "network": "Speech recognition network error. Check your internet."
+      };
+
+      voiceStatus.textContent =
+        messages[event.error] || ("Speech recognition error: " + event.error);
+      voiceStatus.style.color = "var(--danger)";
+    });
+
+    recognition.addEventListener("end", () => {
+      voiceBtn.disabled = false;
+    });
+  }
+        
 </script>
 </body>
 </html>
