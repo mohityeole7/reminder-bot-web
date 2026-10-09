@@ -653,6 +653,7 @@
       text: text,
       dueDate: fmtDate(selectedDate),
       type: selectedType,
+      reminderTime: spokenReminderTime || null,
       createdAt: Date.now()
     }).then(() => {
       document.getElementById("text-input").value = "";
@@ -918,7 +919,7 @@
   const voiceBtn = document.getElementById("voice-btn");
   const voiceStatus = document.getElementById("voice-status");
   const noteInput = document.getElementById("text-input");
-
+  let spokenReminderTime = null;
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -950,6 +951,27 @@
 
     recognition.addEventListener("result", (event) => {
       const transcript = event.results[0][0].transcript.trim();
+      
+const timeMatch = transcript.match(
+  /\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i
+);
+
+spokenReminderTime = null;
+
+if (timeMatch) {
+  let hours = Number(timeMatch[1]);
+  const minutes = Number(timeMatch[2] || "0");
+  const period = timeMatch[3].toLowerCase();
+
+  if (hours >= 1 && hours <= 12 && minutes < 60) {
+    if (period === "pm" && hours !== 12) hours += 12;
+    if (period === "am" && hours === 12) hours = 0;
+
+    spokenReminderTime =
+      String(hours).padStart(2, "0") + ":" +
+      String(minutes).padStart(2, "0");
+  }
+}
       const timeMatch = transcript.match(
   /\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i
 );
