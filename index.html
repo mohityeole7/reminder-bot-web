@@ -959,6 +959,9 @@ const timeMatch = transcript.match(
 spokenReminderTime = null;
 
 if (timeMatch) {
+  spokenReminderTime =
+  String(hours).padStart(2, "0") + ":" +
+  String(minutes).padStart(2, "0");
   let hours = Number(timeMatch[1]);
   const minutes = Number(timeMatch[2] || "0");
   const period = timeMatch[3].toLowerCase();
