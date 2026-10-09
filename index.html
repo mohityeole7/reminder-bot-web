@@ -650,12 +650,12 @@
     if (!selectedDate) { statusEl.textContent = "Pick a due date."; statusEl.style.color = "var(--danger)"; return; }
 
     notesRef.push({
-      text: text,
-      dueDate: fmtDate(selectedDate),
-      type: selectedType,
-      reminderTime: spokenReminderTime || null,
-      createdAt: Date.now()
-    }).then(() => {
+  text: text,
+  dueDate: fmtDate(selectedDate),
+  type: selectedType,
+  reminderTime: spokenReminderTime || null,
+  createdAt: Date.now()
+}).then(() => {
       document.getElementById("text-input").value = "";
       statusEl.textContent = "Added.";
       statusEl.style.color = "var(--success)";
