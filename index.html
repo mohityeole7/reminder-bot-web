@@ -541,10 +541,40 @@ function renderNotes(notes) {
     grouped[bucket].forEach(n => bucketsEl.appendChild(buildItem(n, bucket, false)));
   });
 }
+
+let scheduledNotes = [];
+const triggeredReminders = new Set();
+
+function checkScheduledReminders() {
+  const now = new Date();
+
+  scheduledNotes.forEach(note => {
+    if (!note.dueDate || !note.reminderTime || !note.id) return;
+
+    const scheduled = new Date(
+      `${note.dueDate}T${note.reminderTime}:00`
+    );
+
+    if (Number.isNaN(scheduled.getTime())) return;
+
+    if (now >= scheduled && !triggeredReminders.has(note.id)) {
+      triggeredReminders.add(note.id);
+
+      showAlert(
+        "Reminder",
+        note.text || "Your scheduled reminder is due!"
+      );
+    }
+  });
+}
+
+setInterval(checkScheduledReminders, 5000);
+
 if (firebaseReady) {
   notesRef.on("value", snap => {
     const val = snap.val(); const notes = [];
     if (val) Object.keys(val).forEach(k => notes.push({id:k, ...val[k]}));
+    scheduledNotes = notes;
     renderNotes(notes);
   }, error => { console.error("Loading notes failed:", error); document.getElementById("buckets-section").textContent = "Couldn't load notes."; });
 }
