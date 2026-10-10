@@ -991,12 +991,25 @@ if (timeMatch) {
       // Remove a common spoken command prefix.
       // Example: "Remind me at 8 PM to study robotics"
       // becomes "study robotics".
-      const cleaned = transcript.replace(
-        /^\s*(?:please\s+)?remind\s+me(?:\s+at\s+.+?)?\s+to\s+/i,
-        ""
-      ).trim();
+      
+let cleaned = transcript.trim();
 
-      noteInput.value = cleaned || transcript;
+const commandPatterns = [
+  /^\s*(?:please\s+)?remind\s+me(?:\s+at\s+.+?)?\s+to\s+/i,
+  /^\s*(?:please\s+)?remind\s+me\s+to\s+/i,
+  /^\s*(?:please\s+)?make\s+a\s+note\s+(?:that\s+)?/i,
+  /^\s*(?:please\s+)?my\s+assignment\s+deadline\s+is\s+/i
+];
+
+for (const pattern of commandPatterns) {
+  if (pattern.test(cleaned)) {
+    cleaned = cleaned.replace(pattern, "").trim();
+    break;
+  }
+}
+
+noteInput.value = cleaned || transcript;
+
 
       voiceStatus.textContent =
         "Recognized: " + transcript;
