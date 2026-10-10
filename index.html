@@ -359,13 +359,73 @@ if (!SpeechRecognitionAPI) {
     }
   });
 
-  recognition.addEventListener("result", event => {
+  recognition.addEventListener("result", async event => {
     const transcript = event.results?.[0]?.[0]?.transcript?.trim();
     if (!transcript) {
       voiceStatus.textContent = "I didn't catch that. Please try again.";
       voiceStatus.style.color = "var(--danger)";
       return;
     }
+
+    // Voice deletion: match the spoken target to one exact saved reminder.
+    const deleteCommand = transcript.match(/^\s*(?:please\s+)?(?:delete|remove|cancel)\s+(?:(?:the|my)\s+)?(?:(?:reminder|note|task)\s+)?(?:to\s+)?(.+?)\s*[.!?]*\s*$/i);
+    if (deleteCommand) {
+      const target = deleteCommand[1].trim();
+      const normalize = value => String(value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const targetNormalized = normalize(target);
+
+      if (!firebaseReady || !notesRef) {
+        voiceStatus.textContent = "Can't delete right now because Firebase isn't connected.";
+        voiceStatus.style.color = "var(--danger)";
+        return;
+      }
+      if (!targetNormalized) {
+        voiceStatus.textContent = "Please say the reminder title after 'delete the reminder'.";
+        voiceStatus.style.color = "var(--danger)";
+        return;
+      }
+
+      try {
+        const snapshot = await notesRef.once("value");
+        const saved = snapshot.val() || {};
+        const matches = Object.entries(saved).filter(([, note]) =>
+          normalize(note && note.text) === targetNormalized
+        );
+
+        if (matches.length === 0) {
+          voiceStatus.textContent = `No exact reminder match for "${target}". Nothing was deleted.`;
+          voiceStatus.style.color = "var(--danger)";
+          return;
+        }
+        if (matches.length > 1) {
+          voiceStatus.textContent = `More than one reminder is named "${target}". Nothing was deleted; use the X button to choose the right one.`;
+          voiceStatus.style.color = "var(--danger)";
+          return;
+        }
+
+        const [noteId, note] = matches[0];
+        if (!window.confirm(`Voice command: delete the reminder "${note.text}"?`)) {
+          voiceStatus.textContent = "Deletion cancelled.";
+          voiceStatus.style.color = "var(--text-dim)";
+          return;
+        }
+
+        await notesRef.child(noteId).remove();
+        noteInput.value = "";
+        voiceStatus.textContent = `Deleted reminder: ${note.text}`;
+        voiceStatus.style.color = "var(--success)";
+      } catch (error) {
+        console.error("Voice deletion failed:", error);
+        voiceStatus.textContent = "Couldn't delete the reminder. Check your Firebase connection.";
+        voiceStatus.style.color = "var(--danger)";
+      }
+      return;
+    }
+
     spokenReminderTime = parseSpokenTime(transcript);
     const parsedDate = parseSpokenDate(transcript);
     if (parsedDate && parsedDate.invalid) {
