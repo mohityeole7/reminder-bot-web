@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reminder Bot</title>
+<style>
+:root {
+  --bg-1:#14101f; --bg-2:#1c1730; --bg-glow:#3d2a6b;
+  --card:rgba(28,24,46,.65); --card-solid:#201a35; --border:rgba(255,255,255,.08);
+  --text:#f0ecfb; --text-dim:#9b93b8; --accent:#4fd1c5; --accent-dim:rgba(79,209,197,.15);
+  --deadline:#ffb454; --deadline-dim:rgba(255,180,84,.15); --danger:#ff6b6b; --success:#4fd68c;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%}
+body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:var(--text);min-height:100vh;background:radial-gradient(circle at 15% 0%,var(--bg-glow) 0%,transparent 45%),radial-gradient(circle at 90% 15%,#2a4d5e 0%,transparent 40%),linear-gradient(180deg,var(--bg-1) 0%,var(--bg-2) 100%);background-attachment:fixed;padding-bottom:2.5rem}
+header{padding:1.75rem 1rem 1.25rem;text-align:center}
+header .eyes{font-size:1.6rem;letter-spacing:.3rem;margin-bottom:.4rem;opacity:.9}
+header h1{font-size:1.4rem;margin:0;font-weight:700;letter-spacing:-.01em}
+header p{margin:.3rem 0 0;color:var(--text-dim);font-size:.85rem}
+.tabs{display:flex;max-width:480px;margin:1.1rem auto 0;padding:0 1rem;gap:.4rem}
+.tab-btn{flex:1;padding:.65rem .4rem;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--text-dim);border-radius:12px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s ease}
+.tab-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--text)}
+main{max-width:480px;margin:0 auto;padding:1rem}
+.panel{display:none}.panel.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--card);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:16px;padding:1.1rem;margin-bottom:1rem}
+.card h2{font-size:.78rem;margin:0 0 .85rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+label{display:block;font-size:.78rem;color:var(--text-dim);margin:.7rem 0 .35rem}
+input[type="text"],input[type="time"],input[type="number"]{width:100%;padding:.7rem .8rem;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:1rem}
+input:focus,.type-btn:focus-visible,.tab-btn:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.date-field{padding:.7rem .8rem;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:1rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.date-field .dim{color:var(--text-dim)}.cal-wrap{position:relative}
+.calendar{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card-solid);border:1px solid var(--border);border-radius:14px;padding:.8rem;z-index:20;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.calendar.open{display:block}.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;font-size:.9rem;font-weight:600}
+.cal-nav{background:none;border:none;color:var(--text);font-size:1.1rem;cursor:pointer;padding:.2rem .5rem}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+.cal-grid .dow{font-size:.68rem;color:var(--text-dim);padding-bottom:.3rem}
+.cal-day{padding:.45rem 0;border-radius:8px;font-size:.85rem;cursor:pointer}.cal-day:hover{background:rgba(255,255,255,.08)}
+.cal-day.today{color:var(--accent);font-weight:700}.cal-day.selected{background:var(--accent);color:#0d1b1a;font-weight:700}.cal-day.other-month{color:rgba(255,255,255,.2)}
+.type-toggle{display:flex;gap:.5rem;margin-top:.3rem}
+.type-btn{flex:1;padding:.55rem;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:10px;color:var(--text-dim);font-size:.85rem;cursor:pointer;text-align:center}
+.type-btn.selected[data-type="reminder"]{border-color:var(--accent);background:var(--accent-dim);color:var(--text)}
+.type-btn.selected[data-type="deadline"]{border-color:var(--deadline);background:var(--deadline-dim);color:var(--text)}
+button.primary{width:100%;margin-top:1.1rem;padding:.8rem;background:var(--accent);border:none;border-radius:10px;color:#0d1b1a;font-size:.95rem;font-weight:700;cursor:pointer}
+button.primary:active{transform:scale(.99)}
+.bucket-label{font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin:1.3rem 0 .5rem;font-weight:700}
+.item{background:var(--card);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:14px;padding:.8rem .9rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.6rem}
+.item.deadline{border-left:3px solid var(--deadline)}.item.reminder{border-left:3px solid var(--accent)}
+.item-text{flex:1;font-size:.93rem;overflow-wrap:anywhere}
+.item-badge{font-size:.7rem;padding:.22rem .55rem;border-radius:20px;white-space:nowrap;font-weight:700}
+.item-badge.urgent{background:var(--deadline-dim);color:var(--deadline)}.item-badge.ok{background:var(--accent-dim);color:var(--accent)}
+.del-btn{background:none;border:none;color:var(--text-dim);font-size:1.05rem;cursor:pointer;padding:.2rem .35rem}
+.empty{color:var(--text-dim);font-size:.85rem;text-align:center;padding:1.3rem 0}.status{text-align:center;font-size:.75rem;margin-top:.5rem;min-height:1em;overflow-wrap:anywhere}
+.routine-row{display:flex;align-items:center;gap:.6rem;padding:.6rem .2rem;border-bottom:1px solid var(--border)}
+.routine-row:last-child{border-bottom:none}.routine-check{width:22px;height:22px;border-radius:7px;border:2px solid var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:.85rem}
+.routine-check.done{background:var(--success);border-color:var(--success);color:#0d1b1a}.routine-text{flex:1;font-size:.92rem;overflow-wrap:anywhere}.routine-text.done{text-decoration:line-through;color:var(--text-dim)}
+.routine-add-row{display:flex;gap:.5rem;margin-top:.8rem}.routine-add-row input{flex:1;min-width:0}
+.routine-add-row button,.add-alarm-row button{background:var(--accent-dim);border:1px solid var(--accent);color:var(--text);border-radius:10px;padding:0 .9rem;cursor:pointer;font-weight:700}
+.timer-display{font-size:2.6rem;font-weight:800;text-align:center;letter-spacing:.03em;margin:.5rem 0 1rem;font-variant-numeric:tabular-nums}
+.timer-inputs{display:flex;gap:.5rem}.timer-btns{display:flex;gap:.5rem;margin-top:.9rem}
+.timer-btns button{flex:1;padding:.65rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-weight:700;cursor:pointer}
+.timer-btns button.start{background:var(--accent-dim);border-color:var(--accent)}.timer-btns button.stop{background:rgba(255,107,107,.15);border-color:var(--danger)}
+.alarm-row{display:flex;align-items:center;gap:.6rem;padding:.55rem .2rem;border-bottom:1px solid var(--border)}.alarm-row:last-child{border-bottom:none}
+.alarm-time{font-size:1.1rem;font-weight:700;flex:1}.add-alarm-row{display:flex;gap:.5rem;margin-top:.9rem}.add-alarm-row input{flex:1;min-width:0}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);align-items:center;justify-content:center;z-index:100;padding:1rem}
+.modal-overlay.open{display:flex}.modal-box{background:var(--card-solid);border:1px solid var(--accent);border-radius:16px;padding:1.5rem;text-align:center;max-width:320px;width:100%}
+.modal-box h3{margin:.3rem 0}.modal-box button{margin-top:1rem;background:var(--accent);border:none;border-radius:10px;padding:.6rem 1.5rem;color:#0d1b1a;font-weight:700;cursor:pointer}
+.drive-btn{touch-action:manipulation}
+</style>
+</head>
+<body>
+<header><div class="eyes">◕ ◕</div><h1>Reminder Bot</h1><p>Add a note. The bot reads it back when you ask.</p></header>
+<div class="tabs">
+  <button class="tab-btn active" data-tab="add">Add</button><button class="tab-btn" data-tab="notes">Notes</button><button class="tab-btn" data-tab="timer">Timer</button><button class="tab-btn" data-tab="control">Control</button>
+</div>
+<main>
+  <div class="panel active" id="panel-add">
+    <div class="card">
+      <h2>Add a note</h2><label for="text-input">What is it?</label><input type="text" id="text-input" placeholder="e.g. Submit DBMS assignment">
+      <button type="button" class="primary" id="voice-btn" style="margin-top:.6rem">🎙️ Speak your reminder</button><div class="status" id="voice-status" aria-live="polite"></div>
+      <label>Due date</label><div class="cal-wrap"><div class="date-field" id="date-field" role="button" tabindex="0" aria-label="Choose due date"><span id="date-field-label">Select a date</span><span class="dim">📅</span></div>
+        <div class="calendar" id="calendar"><div class="cal-head"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><span id="cal-month-label"></span><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button></div><div class="cal-grid" id="cal-grid"></div></div>
+      </div>
+      <label>Type</label><div class="type-toggle"><button type="button" class="type-btn selected" data-type="reminder">Reminder</button><button type="button" class="type-btn" data-type="deadline">Deadline</button></div>
+      <button type="button" class="primary" id="add-btn">Add note</button><div class="status" id="add-status" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="panel" id="panel-notes">
+    <div class="card"><h2>Daily routine</h2><div id="routine-list"></div><div class="routine-add-row"><input type="text" id="routine-input" placeholder="e.g. Drink water"><button type="button" id="routine-add-btn" aria-label="Add routine item">+</button></div></div>
+    <div id="deadlines-section"></div><div id="buckets-section"></div>
+  </div>
+  <div class="panel" id="panel-timer">
+    <div class="card"><h2>Timer</h2><div class="timer-display" id="timer-display">05:00</div><div class="timer-inputs">
+      <div style="flex:1"><label for="timer-minutes" style="margin-top:0">Minutes</label><input type="number" id="timer-minutes" value="5" min="0" max="180"></div>
+      <div style="flex:1"><label for="timer-seconds" style="margin-top:0">Seconds</label><input type="number" id="timer-seconds" value="0" min="0" max="59"></div>
+    </div><div class="timer-btns"><button type="button" class="start" id="timer-start">Start</button><button type="button" id="timer-pause">Pause</button><button type="button" class="stop" id="timer-reset">Reset</button></div></div>
+    <div class="card"><h2>Alarms</h2><div id="alarm-list"></div><div class="add-alarm-row"><input type="time" id="alarm-time-input" aria-label="Alarm time"><button type="button" id="alarm-add-btn" aria-label="Add alarm">+</button></div><p style="color:var(--text-dim);font-size:.75rem;margin-top:.8rem;margin-bottom:0">Only rings while this page stays open in your browser.</p></div>
+  </div>
+  <div class="panel" id="panel-control">
+    <div class="card"><h2>Drive</h2><p style="color:var(--text-dim);font-size:.78rem;margin:0 0 .8rem">Works only when your phone is on the same WiFi as the bot.</p>
+      <div style="text-align:center;font-size:.8rem;color:var(--text-dim);margin-bottom:.8rem">Bot IP: <input type="text" id="bot-ip-input" value="192.168.0.101" style="width:130px;text-align:center;padding:.3rem;font-size:.8rem"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;max-width:260px;margin:0 auto">
+        <div></div><button type="button" class="drive-btn" data-cmd="forward" aria-label="Forward" style="padding:.9rem;border-radius:10px;border:1px solid var(--border);background:var(--accent-dim);color:var(--text);font-size:1.2rem;cursor:pointer">▲</button><div></div>
+        <button type="button" class="drive-btn" data-cmd="left" aria-label="Left" style="padding:.9rem;border-radius:10px;border:1px solid var(--border);background:var(--accent-dim);color:var(--text);font-size:1.2rem;cursor:pointer">◀</button>
+        <button type="button" class="drive-btn" data-cmd="stop" aria-label="Stop" style="padding:.9rem;border-radius:10px;border:1px solid var(--danger);background:rgba(255,107,107,.15);color:var(--text);font-size:1rem;cursor:pointer;font-weight:700">STOP</button>
+        <button type="button" class="drive-btn" data-cmd="right" aria-label="Right" style="padding:.9rem;border-radius:10px;border:1px solid var(--border);background:var(--accent-dim);color:var(--text);font-size:1.2rem;cursor:pointer">▶</button>
+      </div><div class="status" id="drive-status" aria-live="polite"></div>
+    </div>
+    <div class="card"><h2>Speaker</h2><p class="empty" style="padding:.5rem 0">Volume/mute controls arrive once the bot's speaker is wired in. Local WiFi only, same as Drive.</p></div>
+  </div>
+</main>
+<div class="modal-overlay" id="alert-modal" role="dialog" aria-modal="true" aria-labelledby="alert-title"><div class="modal-box"><h3 id="alert-title">⏰ Time's up</h3><p id="alert-message" style="color:var(--text-dim)"></p><button type="button" id="alert-dismiss">Dismiss</button></div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+"use strict";
+
+// ---------- Tabs ----------
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+// ---------- Type toggle ----------
+let selectedType = "reminder";
+document.querySelectorAll(".type-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".type-btn").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    selectedType = btn.dataset.type;
+  });
+});
+
+// ---------- Calendar ----------
+const dateField = document.getElementById("date-field");
+const dateFieldLabel = document.getElementById("date-field-label");
+const calendar = document.getElementById("calendar");
+const calGrid = document.getElementById("cal-grid");
+const calMonthLabel = document.getElementById("cal-month-label");
+let selectedDate = null;
+const todayDate = new Date();
+todayDate.setHours(0, 0, 0, 0);
+let viewYear = todayDate.getFullYear();
+let viewMonth = todayDate.getMonth();
+
+function pad(n) { return n < 10 ? "0" + n : String(n); }
+function fmtDate(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function fmtDisplay(d) { return d.toLocaleDateString(undefined, {weekday:"short", day:"numeric", month:"short"}); }
+
+function renderCalendar() {
+  calMonthLabel.textContent = new Date(viewYear, viewMonth, 1).toLocaleDateString(undefined, {month:"long", year:"numeric"});
+  calGrid.innerHTML = "";
+  ["S","M","T","W","T","F","S"].forEach(day => {
+    const el = document.createElement("div");
+    el.className = "dow"; el.textContent = day; calGrid.appendChild(el);
+  });
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const el = document.createElement("div"); el.className = "cal-day other-month";
+    el.textContent = daysInPrevMonth - i; calGrid.appendChild(el);
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const el = document.createElement("div"); el.className = "cal-day"; el.textContent = day;
+    const thisDate = new Date(viewYear, viewMonth, day);
+    if (thisDate.getTime() === todayDate.getTime()) el.classList.add("today");
+    if (selectedDate && thisDate.getTime() === selectedDate.getTime()) el.classList.add("selected");
+    el.addEventListener("click", () => {
+      selectedDate = thisDate;
+      dateFieldLabel.textContent = fmtDisplay(thisDate);
+      dateFieldLabel.classList.remove("dim");
+      calendar.classList.remove("open");
+      renderCalendar();
+    });
+    calGrid.appendChild(el);
+  }
+  const remaining = 42 - (firstDay + daysInMonth);
+  for (let day = 1; day <= remaining; day++) {
+    const el = document.createElement("div"); el.className = "cal-day other-month";
+    el.textContent = day; calGrid.appendChild(el);
+  }
+}
+function toggleCalendar() { calendar.classList.toggle("open"); }
+dateField.addEventListener("click", toggleCalendar);
+dateField.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCalendar(); } });
+document.getElementById("cal-prev").addEventListener("click", e => { e.stopPropagation(); viewMonth--; if (viewMonth < 0) {viewMonth=11;viewYear--;} renderCalendar(); });
+document.getElementById("cal-next").addEventListener("click", e => { e.stopPropagation(); viewMonth++; if (viewMonth > 11) {viewMonth=0;viewYear++;} renderCalendar(); });
+document.addEventListener("click", e => {
+  if (!calendar.contains(e.target) && e.target !== dateField && !dateField.contains(e.target)) calendar.classList.remove("open");
+});
+selectedDate = new Date(todayDate);
+dateFieldLabel.textContent = fmtDisplay(selectedDate);
+renderCalendar();
+
+// ---------- Firebase ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyDUT9q0yKpseAtHeHWVoIR8uHvDv9dMJZA",
+  authDomain: "reminder-bot-e0ab5.firebaseapp.com",
+  databaseURL: "https://reminder-bot-e0ab5-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "reminder-bot-e0ab5",
+  storageBucket: "reminder-bot-e0ab5.firebasestorage.app",
+  messagingSenderId: "1052559567659",
+  appId: "1:1052559567659:web:9d38eaaea4bc5f35dbb36e"
+};
+let db, notesRef, routineRef, firebaseReady = false;
+try {
+  if (!window.firebase) throw new Error("Firebase SDK did not load");
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  notesRef = db.ref("notes");
+  routineRef = db.ref("routine");
+  firebaseReady = true;
+} catch (err) {
+  console.error("Firebase initialization failed:", err);
+  const status = document.getElementById("add-status");
+  status.textContent = "Can't connect to Firebase. Check internet and Firebase configuration.";
+  status.style.color = "var(--danger)";
+}
+
+// ---------- Voice recognition ----------
+const voiceBtn = document.getElementById("voice-btn");
+const voiceStatus = document.getElementById("voice-status");
+const noteInput = document.getElementById("text-input");
+let spokenReminderTime = null;
+let recognition = null;
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function parseSpokenTime(transcript) {
+  const match = transcript.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/i);
+  if (!match) return null;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2] || "0");
+  const period = match[3].toLowerCase().replace(/\./g, "");
+  if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) return null;
+  if (period === "pm" && hours !== 12) hours += 12;
+  if (period === "am" && hours === 12) hours = 0;
+  return `${pad(hours)}:${pad(minutes)}`;
+}
+
+function parseSpokenDate(transcript) {
+  const text = transcript.toLowerCase();
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  if (/\btoday\b/.test(text)) return today;
+  if (/\btomorrow\b/.test(text)) { const d = new Date(today); d.setDate(d.getDate()+1); return d; }
+  const weekdayMatch = text.match(/\b(?:next\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
+  if (weekdayMatch) {
+    const names = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+    const target = names.indexOf(weekdayMatch[1]);
+    let diff = (target - today.getDay() + 7) % 7;
+    if (diff === 0 || /^next\s/.test(weekdayMatch[0])) diff += 7;
+    const d = new Date(today); d.setDate(d.getDate()+diff); return d;
+  }
+  const monthNames = "january february march april may june july august september october november december";
+  const months = monthNames.split(" ");
+  const monthPattern = "january|february|march|april|may|june|july|august|september|october|november|december";
+  const monthFirst = text.match(new RegExp("\\b(" + monthPattern + ")\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?\\b", "i"));
+  const dayFirst = text.match(new RegExp("\\b(?:on\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(" + monthPattern + ")(?:,?\\s+(\\d{4}))?\\b", "i"));
+  const numeric = text.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+  let date = null;
+  const explicit = monthFirst || dayFirst;
+  if (explicit) {
+    const isDayFirst = Boolean(dayFirst && explicit === dayFirst);
+    const monthName = isDayFirst ? explicit[2] : explicit[1];
+    const day = Number(isDayFirst ? explicit[1] : explicit[2]);
+    const explicitYear = isDayFirst ? explicit[3] : explicit[3];
+    const month = months.indexOf(monthName.toLowerCase());
+    let year = explicitYear ? Number(explicitYear) : today.getFullYear();
+    date = new Date(year, month, day);
+    if (!explicitYear && date < today) date.setFullYear(year + 1);
+    if (date.getMonth() !== month || date.getDate() !== day) return {invalid:true};
+  } else if (numeric) {
+    date = new Date(Number(numeric[1]), Number(numeric[2])-1, Number(numeric[3]));
+    if (date.getMonth() !== Number(numeric[2])-1 || date.getDate() !== Number(numeric[3])) return {invalid:true};
+  }
+  if (date && date < today) return {past:true};
+  return date;
+}
+
+function cleanVoiceCommand(transcript) {
+  let cleaned = transcript.trim().replace(/[.!?]+$/g, "").trim();
+
+  // Handle common reminder phrasing, including dates placed before "to".
+  cleaned = cleaned.replace(/^\s*(?:please\s+)?remind\s+me\s+/i, "");
+  cleaned = cleaned.replace(/^\s*(?:please\s+)?(?:can\s+you\s+)?remind\s+me\s+/i, "");
+  cleaned = cleaned.replace(/^\s*(?:please\s+)?make\s+a\s+note\s+(?:that\s+)?/i, "");
+
+  // Remove leading date/time phrases left after "remind me".
+  cleaned = cleaned.replace(/^(?:(?:on|for)\s+)?(?:today|tomorrow|next\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\s+to\s+/i, "");
+  cleaned = cleaned.replace(/^(?:(?:on|for)\s+)?(?:today|tomorrow|next\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\s+/i, "");
+  cleaned = cleaned.replace(/^(?:on|for)\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?\s+to\s+/i, "");
+  cleaned = cleaned.replace(/^(?:(?:on|for)\s+)?\d{1,2}(?:st|nd|rd|th)?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:,?\s+\d{4})?\s+to\s+/i, "");
+
+  // Turn deadline statements into concise task titles.
+  cleaned = cleaned.replace(/^\s*(?:my\s+)?assignment\s+deadline\s+is\s+/i, "Assignment deadline ");
+  cleaned = cleaned.replace(/^\s*(?:the\s+)?deadline\s+for\s+(.+?)\s+is\s+/i, "$1 deadline ");
+
+  // Remove date/time phrases wherever they occur in the remaining title.
+  cleaned = cleaned
+    .replace(/\b(?:today|tomorrow|next\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/ig, "")
+    .replace(/\b(?:on|for)\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?\b/ig, "")
+    .replace(/\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?\b/ig, "")
+    .replace(/\b\d{1,2}(?:st|nd|rd|th)?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:,?\s+\d{4})?\b/ig, "")
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/^\s*(?:to|is|on|for)\s+/i, "")
+    .trim();
+  return cleaned;
+}
+
+if (!SpeechRecognitionAPI) {
+  voiceBtn.disabled = true;
+  voiceStatus.textContent = "Speech recognition isn't supported in this browser. Try Chrome on your phone.";
+  voiceStatus.style.color = "var(--danger)";
+} else {
+  recognition = new SpeechRecognitionAPI();
+  recognition.lang = "en-IN";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  voiceBtn.addEventListener("click", () => {
+    if (!recognition) return;
+    voiceStatus.textContent = "Listening... Speak your reminder.";
+    voiceStatus.style.color = "var(--text-dim)";
+    voiceBtn.disabled = true;
+    try { recognition.start(); }
+    catch (error) {
+      voiceBtn.disabled = false;
+      voiceStatus.textContent = "Couldn't start listening. Wait a moment and try again.";
+      voiceStatus.style.color = "var(--danger)";
+      console.error("Speech recognition start error:", error);
+    }
+  });
+
+  recognition.addEventListener("result", event => {
+    const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+    if (!transcript) {
+      voiceStatus.textContent = "I didn't catch that. Please try again.";
+      voiceStatus.style.color = "var(--danger)";
+      return;
+    }
+    spokenReminderTime = parseSpokenTime(transcript);
+    const parsedDate = parseSpokenDate(transcript);
+    if (parsedDate && parsedDate.invalid) {
+      voiceStatus.textContent = "I couldn't understand that date. Please choose it using the calendar.";
+      voiceStatus.style.color = "var(--danger)";
+    } else if (parsedDate && parsedDate.past) {
+      voiceStatus.textContent = "That date is in the past. Please choose a future date.";
+      voiceStatus.style.color = "var(--danger)";
+    } else if (parsedDate instanceof Date && !Number.isNaN(parsedDate.getTime())) {
+      selectedDate = parsedDate;
+      viewYear = selectedDate.getFullYear();
+      viewMonth = selectedDate.getMonth();
+      dateFieldLabel.textContent = fmtDisplay(selectedDate);
+      dateFieldLabel.classList.remove("dim");
+      renderCalendar();
+    }
+    const cleaned = cleanVoiceCommand(transcript);
+    noteInput.value = cleaned || transcript;
+    voiceStatus.textContent = "Recognized: " + transcript + (spokenReminderTime ? ` (time: ${spokenReminderTime})` : "");
+    voiceStatus.style.color = "var(--success)";
+    noteInput.focus();
+  });
+
+  recognition.addEventListener("error", event => {
+    const messages = {
+      "not-allowed":"Allow microphone access in your browser settings.",
+      "service-not-allowed":"Speech recognition isn't allowed by this browser.",
+      "no-speech":"No speech detected. Please try again.",
+      "network":"Speech recognition network error. Check your internet connection.",
+      "audio-capture":"No microphone was found or it is unavailable."
+    };
+    voiceStatus.textContent = messages[event.error] || ("Speech recognition error: " + event.error);
+    voiceStatus.style.color = "var(--danger)";
+  });
+  recognition.addEventListener("end", () => { voiceBtn.disabled = false; });
+}
+
+// ---------- Add note ----------
+document.getElementById("add-btn").addEventListener("click", async () => {
+  const text = noteInput.value.trim();
+  const statusEl = document.getElementById("add-status");
+  if (!firebaseReady) { statusEl.textContent = "Not connected — can't save."; statusEl.style.color = "var(--danger)"; return; }
+  if (!text) { statusEl.textContent = "Enter what it is first."; statusEl.style.color = "var(--danger)"; return; }
+  if (!selectedDate) { statusEl.textContent = "Pick a due date."; statusEl.style.color = "var(--danger)"; return; }
+  const dueDate = fmtDate(selectedDate);
+  const payload = {text, dueDate, type:selectedType, reminderTime:spokenReminderTime || null, createdAt:Date.now()};
+  try {
+    await notesRef.push(payload);
+    noteInput.value = "";
+    spokenReminderTime = null;
+    statusEl.textContent = "Added.";
+    statusEl.style.color = "var(--success)";
+    setTimeout(() => { statusEl.textContent = ""; }, 1800);
+  } catch (error) {
+    console.error("Saving note failed:", error);
+    statusEl.textContent = "Couldn't save. Check connection and Firebase permissions.";
+    statusEl.style.color = "var(--danger)";
+  }
+});
+
+// ---------- Notes rendering ----------
+function daysBetween(dateStr) {
+  if (!dateStr) return 0;
+  const due = new Date(dateStr + "T00:00:00");
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((due - now) / 86400000);
+}
+function bucketFor(daysAway) {
+  if (daysAway < 0) return "Overdue";
+  if (daysAway === 0) return "Today";
+  if (daysAway === 1) return "Tomorrow";
+  if (daysAway <= 7) return "This week";
+  if (daysAway <= 31) return "This month";
+  return "This year";
+}
+function countdownLabel(daysAway) {
+  if (daysAway < 0) return `${Math.abs(daysAway)}d overdue`;
+  if (daysAway === 0) return "Today";
+  if (daysAway === 1) return "1 day left";
+  return `${daysAway} days left`;
+}
+function buildItem(note, badgeText, urgent) {
+  const div = document.createElement("div");
+  div.className = "item " + (note.type === "deadline" ? "deadline" : "reminder");
+  const textEl = document.createElement("div"); textEl.className = "item-text"; textEl.textContent = note.text || "(Untitled)";
+  const badge = document.createElement("div"); badge.className = "item-badge " + (urgent ? "urgent" : "ok"); badge.textContent = badgeText;
+  const delBtn = document.createElement("button"); delBtn.type = "button"; delBtn.className = "del-btn"; delBtn.textContent = "✕"; delBtn.setAttribute("aria-label", "Delete " + (note.text || "note"));
+  delBtn.addEventListener("click", async () => {
+    if (!window.confirm(`Delete "${note.text || "this note"}"?`)) return;
+    try { await notesRef.child(note.id).remove(); }
+    catch (error) { console.error(error); alert("Couldn't delete this note. Check your connection."); }
+  });
+  div.append(textEl, badge, delBtn);
+  return div;
+}
+function renderNotes(notes) {
+  const deadlinesEl = document.getElementById("deadlines-section");
+  const bucketsEl = document.getElementById("buckets-section");
+  deadlinesEl.innerHTML = ""; bucketsEl.innerHTML = "";
+  if (!notes.length) { bucketsEl.innerHTML = '<div class="empty">No notes yet.</div>'; return; }
+  const deadlines = notes.filter(n => n.type === "deadline").sort((a,b) => daysBetween(a.dueDate)-daysBetween(b.dueDate));
+  const reminders = notes.filter(n => n.type !== "deadline");
+  if (deadlines.length) {
+    const label = document.createElement("div"); label.className = "bucket-label"; label.textContent = "Deadlines"; deadlinesEl.appendChild(label);
+    deadlines.forEach(n => { const days = daysBetween(n.dueDate); deadlinesEl.appendChild(buildItem(n, countdownLabel(days), days <= 2)); });
+  }
+  const order = ["Overdue","Today","Tomorrow","This week","This month","This year"];
+  const grouped = {};
+  reminders.forEach(n => { const bucket = bucketFor(daysBetween(n.dueDate)); (grouped[bucket] ||= []).push(n); });
+  order.forEach(bucket => {
+    if (!grouped[bucket]) return;
+    const label = document.createElement("div"); label.className = "bucket-label"; label.textContent = bucket; bucketsEl.appendChild(label);
+    grouped[bucket].forEach(n => bucketsEl.appendChild(buildItem(n, bucket, false)));
+  });
+}
+if (firebaseReady) {
+  notesRef.on("value", snap => {
+    const val = snap.val(); const notes = [];
+    if (val) Object.keys(val).forEach(k => notes.push({id:k, ...val[k]}));
+    renderNotes(notes);
+  }, error => { console.error("Loading notes failed:", error); document.getElementById("buckets-section").textContent = "Couldn't load notes."; });
+}
+
+// ---------- Daily routine ----------
+const routineList = document.getElementById("routine-list");
+const todayKey = fmtDate(new Date());
+function getDoneSet() {
+  try { const raw = localStorage.getItem("routine-done-" + todayKey); return raw ? new Set(JSON.parse(raw)) : new Set(); }
+  catch (error) { console.warn("Routine checklist storage unavailable:", error); return new Set(); }
+}
+function saveDoneSet(set) {
+  try { localStorage.setItem("routine-done-" + todayKey, JSON.stringify([...set])); }
+  catch (error) { console.warn("Couldn't save routine checklist:", error); }
+}
+function renderRoutine(items) {
+  routineList.innerHTML = "";
+  const done = getDoneSet();
+  if (!items.length) { routineList.innerHTML = '<div class="empty">No routine items yet.</div>'; return; }
+  items.forEach(item => {
+    const row = document.createElement("div"); row.className = "routine-row";
+    const check = document.createElement("button"); check.type = "button"; check.className = "routine-check" + (done.has(item.id) ? " done" : "");
+    check.textContent = done.has(item.id) ? "✓" : ""; check.setAttribute("aria-label", "Toggle " + item.text);
+    check.addEventListener("click", () => { const set = getDoneSet(); if (set.has(item.id)) set.delete(item.id); else set.add(item.id); saveDoneSet(set); renderRoutine(items); });
+    const text = document.createElement("div"); text.className = "routine-text" + (done.has(item.id) ? " done" : ""); text.textContent = item.text;
+    const delBtn = document.createElement("button"); delBtn.type = "button"; delBtn.className = "del-btn"; delBtn.textContent = "✕"; delBtn.setAttribute("aria-label", "Delete routine item");
+    delBtn.addEventListener("click", async () => {
+      if (!window.confirm(`Delete routine item "${item.text}"?`)) return;
+      try { await routineRef.child(item.id).remove(); } catch (error) { console.error(error); alert("Couldn't delete routine item."); }
+    });
+    row.append(check, text, delBtn); routineList.appendChild(row);
+  });
+}
+if (firebaseReady) {
+  routineRef.on("value", snap => {
+    const val = snap.val(); const items = [];
+    if (val) Object.keys(val).forEach(k => items.push({id:k, ...val[k]}));
+    renderRoutine(items);
+  }, error => { console.error("Loading routine failed:", error); routineList.textContent = "Couldn't load routine."; });
+}
+document.getElementById("routine-add-btn").addEventListener("click", async () => {
+  const input = document.getElementById("routine-input"); const text = input.value.trim();
+  if (!text || !firebaseReady) return;
+  try { await routineRef.push({text, createdAt:Date.now()}); input.value = ""; }
+  catch (error) { console.error(error); alert("Couldn't add routine item. Check your connection."); }
+});
+document.getElementById("routine-input").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("routine-add-btn").click(); });
+
+// ---------- Timer and alerts ----------
+let timerSeconds = 300, timerInterval = null, timerRunning = false;
+const timerDisplay = document.getElementById("timer-display");
+function renderTimer() { const m = Math.floor(timerSeconds/60), s = timerSeconds%60; timerDisplay.textContent = `${pad(m)}:${pad(s)}`; }
+function beep() {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass(); const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 880;
+    gain.gain.setValueAtTime(.2, ctx.currentTime); osc.start(); osc.stop(ctx.currentTime + .5);
+    osc.addEventListener("ended", () => ctx.close());
+  } catch (error) { console.warn("Audio alert unavailable:", error); }
+}
+function showAlert(title, message) {
+  document.getElementById("alert-title").textContent = title;
+  document.getElementById("alert-message").textContent = message;
+  document.getElementById("alert-modal").classList.add("open");
+  beep(); setTimeout(beep, 600); setTimeout(beep, 1200);
+}
+document.getElementById("alert-dismiss").addEventListener("click", () => document.getElementById("alert-modal").classList.remove("open"));
+function readTimerInputs() {
+  const mins = Number(document.getElementById("timer-minutes").value);
+  const secs = Number(document.getElementById("timer-seconds").value);
+  if (!Number.isFinite(mins) || !Number.isFinite(secs) || mins < 0 || mins > 180 || secs < 0 || secs > 59) return null;
+  return Math.floor(mins)*60 + Math.floor(secs);
+}
+document.getElementById("timer-start").addEventListener("click", () => {
+  if (timerRunning) return;
+  if (timerSeconds <= 0) {
+    const inputSeconds = readTimerInputs();
+    if (inputSeconds === null || inputSeconds === 0) { alert("Set a timer greater than zero (up to 180 minutes)."); return; }
+    timerSeconds = inputSeconds;
+  }
+  timerRunning = true;
+  timerInterval = setInterval(() => {
+    timerSeconds = Math.max(0, timerSeconds - 1); renderTimer();
+    if (timerSeconds <= 0) { clearInterval(timerInterval); timerInterval = null; timerRunning = false; showAlert("⏰ Timer done", "Your countdown finished."); }
+  }, 1000);
+});
+document.getElementById("timer-pause").addEventListener("click", () => { clearInterval(timerInterval); timerInterval = null; timerRunning = false; });
+document.getElementById("timer-reset").addEventListener("click", () => {
+  clearInterval(timerInterval); timerInterval = null; timerRunning = false;
+  const value = readTimerInputs(); if (value === null) { alert("Enter minutes from 0 to 180 and seconds from 0 to 59."); return; }
+  timerSeconds = value; renderTimer();
+});
+renderTimer();
+
+// ---------- Alarms (only while page is open) ----------
+const alarmList = document.getElementById("alarm-list");
+function getAlarms() { try { return JSON.parse(localStorage.getItem("alarms") || "[]"); } catch { return []; } }
+function saveAlarms(alarms) { try { localStorage.setItem("alarms", JSON.stringify(alarms)); } catch (error) { console.warn(error); } }
+function renderAlarms() {
+  const alarms = getAlarms(); alarmList.innerHTML = "";
+  if (!alarms.length) { alarmList.innerHTML = '<div class="empty">No alarms set.</div>'; return; }
+  alarms.forEach((alarm, index) => {
+    const row = document.createElement("div"); row.className = "alarm-row";
+    const time = document.createElement("div"); time.className = "alarm-time"; time.textContent = alarm.time;
+    const delBtn = document.createElement("button"); delBtn.type = "button"; delBtn.className = "del-btn"; delBtn.textContent = "✕"; delBtn.setAttribute("aria-label", "Delete alarm");
+    delBtn.addEventListener("click", () => { const list = getAlarms(); list.splice(index, 1); saveAlarms(list); renderAlarms(); });
+    row.append(time, delBtn); alarmList.appendChild(row);
+  });
+}
+document.getElementById("alarm-add-btn").addEventListener("click", () => {
+  const input = document.getElementById("alarm-time-input"); if (!input.value) return;
+  const alarms = getAlarms(); if (!alarms.some(a => a.time === input.value)) alarms.push({time:input.value, firedDate:""});
+  saveAlarms(alarms); input.value = ""; renderAlarms();
+});
+renderAlarms();
+setInterval(() => {
+  const now = new Date(); const current = `${pad(now.getHours())}:${pad(now.getMinutes())}`; const today = fmtDate(now);
+  const alarms = getAlarms(); let changed = false;
+  alarms.forEach(alarm => {
+    if (alarm.time === current && alarm.firedDate !== today) { showAlert("⏰ Alarm", "It's " + alarm.time); alarm.firedDate = today; changed = true; }
+  });
+  if (changed) saveAlarms(alarms);
+}, 5000);
+
+// ---------- Drive controls ----------
+const botIpInput = document.getElementById("bot-ip-input");
+const driveStatus = document.getElementById("drive-status");
+try { const savedIp = localStorage.getItem("bot-ip"); if (savedIp) botIpInput.value = savedIp; } catch {}
+botIpInput.addEventListener("change", () => { try { localStorage.setItem("bot-ip", botIpInput.value.trim()); } catch {} });
+document.querySelectorAll(".drive-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const cmd = btn.dataset.cmd; const ip = botIpInput.value.trim();
+    if (!ip || !/^[a-zA-Z0-9.-]+$/.test(ip)) { driveStatus.textContent = "Enter a valid bot IP or hostname first."; driveStatus.style.color = "var(--danger)"; return; }
+    driveStatus.textContent = "Sending " + cmd + "..."; driveStatus.style.color = "var(--text-dim)";
+    fetch(`http://${ip}/${cmd}`, {mode:"no-cors", cache:"no-store"})
+      .then(() => { driveStatus.textContent = cmd + " request sent (no-cors mode can't confirm bot response)."; driveStatus.style.color = "var(--success)"; })
+      .catch(() => { driveStatus.textContent = "Couldn't reach bot. Check its IP and WiFi."; driveStatus.style.color = "var(--danger)"; });
+  });
+});
+</script>
+</body>
+</html>
