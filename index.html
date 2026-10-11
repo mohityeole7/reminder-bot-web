@@ -558,12 +558,14 @@ function checkScheduledReminders() {
     if (Number.isNaN(scheduled.getTime())) return;
 
     if (now >= scheduled && !triggeredReminders.has(note.id)) {
-      triggeredReminders.add(note.id);
+     
+triggeredReminders.add(note.id);
 
-      showAlert(
-        "Reminder",
-        note.text || "Your scheduled reminder is due!"
-      );
+const message = note.text || "Your scheduled reminder is due!";
+
+showAlert("Reminder", message);
+showBrowserNotification("Reminder", message);
+
     }
   });
 }
@@ -643,6 +645,34 @@ function showAlert(title, message) {
   document.getElementById("alert-modal").classList.add("open");
   beep(); setTimeout(beep, 600); setTimeout(beep, 1200);
 }
+
+async function showBrowserNotification(title, message) {
+  if (!("Notification" in window)) {
+    console.log("Browser notifications are not supported.");
+    return false;
+  }
+
+  if (Notification.permission === "default") {
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") return false;
+  }
+
+  if (Notification.permission !== "granted") return false;
+
+  const notification = new Notification(title, {
+    body: message,
+    tag: "reminder-bot-" + Date.now()
+  });
+
+  notification.onclick = () => {
+    window.focus();
+    notification.close();
+  };
+
+  return true;
+}
+
 document.getElementById("alert-dismiss").addEventListener("click", () => document.getElementById("alert-modal").classList.remove("open"));
 function readTimerInputs() {
   const mins = Number(document.getElementById("timer-minutes").value);
