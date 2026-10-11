@@ -132,6 +132,7 @@ input::placeholder { color: #9b93b8 !important; opacity: 1; }
 <div class="modal-overlay" id="alert-modal" role="dialog" aria-modal="true" aria-labelledby="alert-title"><div class="modal-box"><h3 id="alert-title">⏰ Time's up</h3><p id="alert-message" style="color:var(--text-dim)"></p><button type="button" id="alert-dismiss">Dismiss</button></div></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
 "use strict";
@@ -241,6 +242,51 @@ try {
   const status = document.getElementById("add-status");
   status.textContent = "Can't connect to Firebase. Check internet and Firebase configuration.";
   status.style.color = "var(--danger)";
+}
+
+async function registerForPushNotifications() {
+  try {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+      alert("This browser does not support web push notifications.");
+      return;
+    }
+
+    if (!firebaseReady) {
+      alert("Firebase is not connected.");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      alert("Notification permission was not granted.");
+      return;
+    }
+
+    const registration = await navigator.serviceWorker.register(
+      "/firebase-messaging-sw.js"
+    );
+
+    const messaging = firebase.messaging();
+
+    const token = await messaging.getToken({
+      vapidKey: "BBUxTTNuEabPvoApw-8K2Tsq0ROOxvyjmaeXeZRO1QLgz8-FFOsEN2nJPcFU8laR1orJQ03OsKOimVF6sULVQRw",
+      serviceWorkerRegistration: registration
+    });
+
+    if (!token) {
+      alert("Could not get a push notification token.");
+      return;
+    }
+
+    console.log("Push notification registration successful.");
+
+    // We will securely save this token in Firebase in a later step.
+    alert("Push notifications are enabled in this browser.");
+  } catch (error) {
+    console.error("Push registration failed:", error);
+    alert("Push setup failed. Check the browser console.");
+  }
 }
 
 // ---------- Voice recognition ----------
@@ -747,5 +793,20 @@ document.querySelectorAll(".drive-btn").forEach(btn => {
   });
 });
 </script>
+
+<button
+  id="enable-push-btn"
+  type="button"
+  style="position:fixed;bottom:16px;right:16px;z-index:9999;padding:12px 16px;border:0;border-radius:10px;background:#2563eb;color:white;cursor:pointer;"
+>
+  Enable Push Notifications
+</button>
+
+<script>
+  document.getElementById("enable-push-btn").addEventListener("click", () => {
+    registerForPushNotifications();
+  });
+</script>
+
 </body>
 </html>
