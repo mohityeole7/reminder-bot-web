@@ -4,15 +4,15 @@ importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-com
 
 // Replace these placeholder values with the matching values
 // from your existing Firebase configuration.
-firebase.initializeApp({
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  databaseURL: "YOUR_DATABASE_URL",
+const firebaseConfig = {
+  apiKey: "AIzaSyDUT9q0yKpseAtHeHWVoIR8uHvDv9dMJZA",
+  authDomain: "reminder-bot-e0ab5.firebaseapp.com",
+  databaseURL: "https://reminder-bot-e0ab5-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "reminder-bot-e0ab5",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-});
+  storageBucket: "reminder-bot-e0ab5.firebasestorage.app",
+  messagingSenderId: "1052559567659",
+  appId: "1:1052559567659:web:9d38eaaea4bc5f35dbb36e"
+};
 
 const messaging = firebase.messaging();
 
